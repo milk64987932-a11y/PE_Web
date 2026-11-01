@@ -1,8 +1,9 @@
 import { Link, useNavigate, useSearch } from "@tanstack/react-router";
-import { useCallback, useState, type SubmitEvent } from "react";
+import { useState, type SubmitEvent } from "react";
 import { searchMovies } from "../../api/movies/search-movies";
 import { toMovie } from "../../api/movies/models";
-import { useMovieRequest } from "../../hooks/use-movie-request";
+import { useQuery } from "@tanstack/react-query";
+import { getMovieDetailErrorMessage } from "../../utils/movies/get-movie-detail-error-message";
 import { MovieImage } from "../../components/movies/movie-image";
 import { BookmarkButton } from "../../components/bookmark-button";
 
@@ -18,8 +19,13 @@ export function SearchPage() {
   }
 
   const normalizedQuery = query?.trim() ?? "";
-  const request = useCallback((signal: AbortSignal) => searchMovies(normalizedQuery, signal), [normalizedQuery]);
-  const { data, error, loading } = useMovieRequest(normalizedQuery, request, Boolean(normalizedQuery));
+  const searchQuery = useQuery({
+    queryKey: ["movies", "search", { query: normalizedQuery }],
+    queryFn: ({ signal }) => searchMovies(normalizedQuery, signal),
+    enabled: normalizedQuery.length > 0,
+  });
+  const { data, isLoading: loading } = searchQuery;
+  const error = searchQuery.isError ? getMovieDetailErrorMessage(searchQuery.error) : undefined;
   const searchResults = data?.results.map(toMovie) ?? [];
   function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();

@@ -1,13 +1,18 @@
-import { useCallback, useState } from "react";
+import { useState } from "react";
 import MovieGrid from "../../components/movies/movie-grid";
 import Pagination from "../../components/movies/pagination";
 import { getMovies } from "../../api/movies/get-movies";
 import { toMovie } from "../../api/movies/models";
-import { useMovieRequest } from "../../hooks/use-movie-request";
+import { useQuery } from "@tanstack/react-query";
+import { getMovieDetailErrorMessage } from "../../utils/movies/get-movie-detail-error-message";
 export function MovieListPage() {
   const [page, setPage] = useState(1);
-  const request = useCallback((signal: AbortSignal) => getMovies(page, signal), [page]);
-  const { data, loading, error } = useMovieRequest(String(page), request);
+  const moviesQuery = useQuery({
+    queryKey: ["movies", "list", { page }],
+    queryFn: ({ signal }) => getMovies(page, signal),
+  });
+  const { data, isPending: loading } = moviesQuery;
+  const error = moviesQuery.isError ? getMovieDetailErrorMessage(moviesQuery.error) : undefined;
   return (
     <main className="mx-auto max-w-6xl px-6 py-10">
       <h1 className="mb-6 text-3xl font-bold">인기 영화 목록</h1>

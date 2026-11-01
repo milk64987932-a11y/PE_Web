@@ -1,17 +1,25 @@
 import { Link, useParams } from "@tanstack/react-router";
-import { useCallback } from "react";
 import { getMovieDetail } from "../../api/movies/get-movie-detail";
 import { toMovie } from "../../api/movies/models";
-import { useMovieRequest } from "../../hooks/use-movie-request";
+import { useQuery } from "@tanstack/react-query";
+import { getMovieDetailErrorMessage } from "../../utils/movies/get-movie-detail-error-message";
 import { MovieImage } from "../../components/movies/movie-image";
 import { BookmarkButton } from "../../components/bookmark-button";
 
 export function MovieDetailPage() {
-  const { movieId } = useParams({ from: "/movies/$movieId" });
-  const request = useCallback((signal: AbortSignal) => getMovieDetail(movieId, signal), [movieId]);
-  const { data, error, loading } = useMovieRequest(movieId, request);
+  const { movieId: movieIdParam } = useParams({ from: "/movies/$movieId" });
+  const movieId = Number(movieIdParam);
+  const isValidMovieId = /^[1-9]\d*$/.test(movieIdParam) && Number.isSafeInteger(movieId);
+  const movieDetailQuery = useQuery({
+    queryKey: ["movies", "detail", movieId],
+    queryFn: ({ signal }) => getMovieDetail(String(movieId), signal),
+    enabled: isValidMovieId,
+    staleTime: 30 * 1000,
+  });
+  const { data, isPending: loading } = movieDetailQuery;
+  if (!isValidMovieId) return <main className="mx-auto max-w-6xl px-6 py-10"><p role="alert">올바르지 않은 영화 번호예요. 0보다 큰 정수 ID를 입력해 주세요.</p><Link to="/">영화 목록으로</Link></main>;
   if (loading) return <main className="mx-auto max-w-6xl px-6 py-10" role="status">영화 정보를 불러오는 중이에요.</main>;
-  if (error) return <main className="mx-auto max-w-6xl px-6 py-10"><p role="alert">{error}</p><Link to="/">영화 목록으로</Link></main>;
+  if (movieDetailQuery.isError) return <main className="mx-auto max-w-6xl px-6 py-10"><p role="alert">{getMovieDetailErrorMessage(movieDetailQuery.error)}</p><Link to="/">영화 목록으로</Link></main>;
   const movie = data ? toMovie(data) : undefined;
 
   if (!movie) {
