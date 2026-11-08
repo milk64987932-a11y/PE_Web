@@ -18,6 +18,38 @@ import org.springframework.transaction.annotation.Transactional;
 public class MemberService {
   private final MemberRepository memberRepository;
   private final PasswordEncoder passwordEncoder;
+  private final com.umc.movie.config.JwtProvider jwtProvider;
+
+  public LoginResponse login(LoginRequest request) {
+    Member member = memberRepository.findByEmail(request.email()).orElse(null);
+    if (member == null || request.password().getBytes(StandardCharsets.UTF_8).length > 72
+        || !passwordEncoder.matches(request.password(), member.getPassword()))
+      throw new ApiException(401, "AUTH401_1", "이메일 또는 비밀번호가 올바르지 않습니다.");
+    return new LoginResponse(member.getNickname(), jwtProvider.create(member.getMemberId()));
+  }
+
+  public MyMemberResponse me(Long memberId) {
+    return MyMemberResponse.from(findMember(memberId));
+  }
+
+  @Transactional
+  public MyMemberResponse updateMe(Long memberId, UpdateMemberRequest request) {
+    Member member = findMember(memberId);
+    if (memberRepository.existsByNicknameAndMemberIdNot(request.nickname(), memberId))
+      throw new ApiException(409, "MEMBER409_1", "이미 사용 중인 닉네임입니다.");
+    member.updateNickname(request.nickname());
+    try {
+      memberRepository.flush();
+    } catch (org.springframework.dao.DataIntegrityViolationException e) {
+      throw new ApiException(409, "MEMBER409_1", "이미 사용 중인 닉네임입니다.");
+    }
+    return MyMemberResponse.from(member);
+  }
+
+  private Member findMember(Long memberId) {
+    return memberRepository.findById(memberId)
+        .orElseThrow(() -> new ApiException(404, "MEMBER404_1", "존재하지 않는 회원입니다."));
+  }
 
   @Transactional
   public MemberResponse signUp(SignUpRequest request) {

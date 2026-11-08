@@ -50,7 +50,7 @@ public class GlobalExceptionHandler {
         if (message.contains("uk_member_nickname"))
           return error(409, "MEMBER4092", "이미 사용 중인 닉네임입니다.");
         if (message.contains("uk_rating_member_movie"))
-          return error(409, "RATING4091", "이미 이 영화에 평점을 남기셨습니다.");
+          return error(409, "RATING409_1", "이미 이 영화에 평점을 남기셨습니다.");
         return error(409, "COMMON409", "이미 등록된 데이터입니다.");
       }
     }

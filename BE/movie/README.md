@@ -35,3 +35,14 @@ MovieApiIntegrationTest는 실제 MySQL과 전체 Spring 컨텍스트를 사용�
 테스트가 추가한 회원은 트랜잭션 롤백됩니다.
 
 Java 21 테스트 환경에서는 Mockito의 동적 attach를 피하도록 테스트 JVM 시작 시 javaagent를 지정합니다. 애플리케이션 실행이나 보안 기능에는 영향을 주지 않습니다.
+
+## 7주차 JWT 필수 미션
+- JWT_SECRET: 암호학적 난수 32바이트 이상을 Base64로 인코딩한 값을 환경변수로 설정합니다. 기본 비밀키는 없습니다.
+- PowerShell 키 생성: `[Convert]::ToBase64String([System.Security.Cryptography.RandomNumberGenerator]::GetBytes(32))` (생성값은 .env.local에만 보관하고 공유·커밋하지 마세요.)
+- JWT_ACCESS_EXPIRATION=3600 (초). DB_USER, DB_PW, DB_URL은 기존 설정을 사용합니다.
+- POST /auth/login: email/password → nickname/accessToken.
+- GET/PATCH /members/me: Bearer 토큰 필수. PATCH Body는 nickname(2~12자).
+- POST /ratings, PATCH/DELETE /ratings/{ratingId}: Bearer 토큰의 회원 ID 사용. 이전 회원 ID 경로의 쓰기 API는 대체됩니다.
+- 기존 회원가입, 중복 확인, GET /members/{memberId}/ratings는 공개 API로 유지합니다.
+- postman/week07.postman_collection.json: 00 준비 후 01~09 순서로 실행합니다. baseUrl 기본값은 http://localhost:8080입니다. 실행 중 발급되는 토큰을 포함한 Collection/Environment는 Git에 올리지 마세요.
+- 전체 테스트는 실제 MySQL을 사용합니다. 운영 DB 대신 sql/schema.sql과 sql/seed.sql을 적용한 별도 검증용 DB로 DB_URL을 지정하세요. 기존 테스트의 시드 데이터(noco@umc.com 등)가 필요합니다.

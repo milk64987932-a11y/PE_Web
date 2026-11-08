@@ -15,3 +15,6 @@ spring:
     open-in-view: false
 server:
   port: ${SERVER_PORT:8080}
+jwt:
+  secret: ${JWT_SECRET}
+  access-expiration: ${JWT_ACCESS_EXPIRATION:3600}

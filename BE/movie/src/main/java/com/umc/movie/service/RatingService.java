@@ -20,16 +20,15 @@ public class RatingService {
   private final RatingRepository ratingRepository;
 
   @Transactional
-  public Long create(Long memberId, CreateRatingRequest request) {
+  public RatingResponse create(Long memberId, CreateRatingRequest request) {
     Member member =
         memberRepository
             .findById(memberId)
-            .orElseThrow(() -> new ApiException(404, "MEMBER404", "존재하지 않는 회원입니다."));
+            .orElseThrow(() -> new ApiException(404, "MEMBER404_1", "존재하지 않는 회원입니다."));
     if (ratingRepository.existsByMember_MemberIdAndMovieId(memberId, request.movieId()))
-      throw new ApiException(409, "RATING4091", "이미 이 영화에 평점을 남기셨습니다.");
-    return ratingRepository
-        .saveAndFlush(new Rating(member, request.movieId(), request.score(), request.comment()))
-        .getRatingId();
+      throw new ApiException(409, "RATING409_1", "이미 이 영화에 평점을 남기셨습니다.");
+    return RatingResponse.from(ratingRepository
+        .saveAndFlush(new Rating(member, request.movieId(), request.score(), request.comment())));
   }
 
   @Transactional
@@ -43,12 +42,14 @@ public class RatingService {
   }
 
   private Rating findOwned(Long ratingId, Long memberId) {
+    if (!memberRepository.existsById(memberId))
+      throw new ApiException(404, "MEMBER404_1", "존재하지 않는 회원입니다.");
     Rating rating =
         ratingRepository
             .findById(ratingId)
-            .orElseThrow(() -> new ApiException(404, "RATING404", "존재하지 않는 평점입니다."));
+            .orElseThrow(() -> new ApiException(404, "RATING404_1", "존재하지 않는 평점입니다."));
     if (!rating.getMember().getMemberId().equals(memberId))
-      throw new ApiException(403, "RATING403", "본인의 평점만 수정하거나 삭제할 수 있습니다.");
+      throw new ApiException(403, "RATING403_1", "본인의 평점만 수정하거나 삭제할 수 있습니다.");
     return rating;
   }
 

@@ -16,10 +16,11 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
 @SpringBootTest
-@AutoConfigureMockMvc
+@AutoConfigureMockMvc(print = org.springframework.boot.test.autoconfigure.web.servlet.MockMvcPrint.NONE)
 @Transactional
 class DatabaseConflictIntegrationTest {
   @Autowired MockMvc mvc;
+  @Autowired com.umc.movie.config.JwtProvider jwt;
   @MockitoSpyBean MemberRepository members;
   @MockitoSpyBean RatingRepository ratings;
 
@@ -36,11 +37,11 @@ class DatabaseConflictIntegrationTest {
               .getMemberId();
       doReturn(false).when(ratings).existsByMember_MemberIdAndMovieId(member, 550L);
       mvc.perform(
-              post("/members/{m}/ratings", member)
+              post("/ratings").header("Authorization", "Bearer " + jwt.create(member))
                   .contentType("application/json")
                   .content("{\"movieId\":550,\"score\":4}"))
           .andExpect(status().isConflict())
-          .andExpect(jsonPath("$.code").value("RATING4091"));
+          .andExpect(jsonPath("$.code").value("RATING409_1"));
     } else {
       String email =
           kind.equals("email") ? "noco@umc.com" : java.util.UUID.randomUUID() + "@example.com";

@@ -20,6 +20,17 @@ import org.springframework.web.bind.annotation.*;
 public class MemberController {
   private final MemberService memberService;
 
+  @GetMapping("/me")
+  public ApiResponse<MyMemberResponse> me(@RequestAttribute Long memberId) {
+    return ApiResponse.ok("회원 조회에 성공했습니다.", memberService.me(memberId));
+  }
+
+  @PatchMapping("/me")
+  public ApiResponse<MyMemberResponse> updateMe(@RequestAttribute Long memberId,
+      @Valid @RequestBody UpdateMemberRequest request) {
+    return ApiResponse.ok("회원 수정에 성공했습니다.", memberService.updateMe(memberId, request));
+  }
+
   @PostMapping
   public ResponseEntity<ApiResponse<MemberResponse>> signUp(
       @Valid @RequestBody SignUpRequest request) {

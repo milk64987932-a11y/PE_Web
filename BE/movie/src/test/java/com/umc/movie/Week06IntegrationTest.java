@@ -18,13 +18,14 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
 @SpringBootTest
-@AutoConfigureMockMvc
+@AutoConfigureMockMvc(print = org.springframework.boot.test.autoconfigure.web.servlet.MockMvcPrint.NONE)
 @Transactional
 class Week06IntegrationTest {
   @Autowired MockMvc mvc;
   @Autowired ObjectMapper json;
   @Autowired JdbcTemplate jdbc;
   @Autowired PasswordEncoder encoder;
+  @Autowired com.umc.movie.config.JwtProvider jwt;
 
   String suffix() {
     return UUID.randomUUID().toString().replace("-", "").substring(0, 10);
@@ -54,14 +55,14 @@ class Week06IntegrationTest {
   long rating(long member) throws Exception {
     return json.readTree(
             mvc.perform(
-                    post("/members/{m}/ratings", member)
+                    post("/ratings").header("Authorization", "Bearer " + jwt.create(member))
                         .contentType("application/json")
                         .content("{\"movieId\":550,\"score\":5}"))
                 .andExpect(status().isCreated())
                 .andReturn()
                 .getResponse()
                 .getContentAsString())
-        .path("result")
+        .path("result").path("ratingId")
         .asLong();
   }
 
@@ -113,19 +114,19 @@ class Week06IntegrationTest {
   void crudAndOwnership() throws Exception {
     long m = member(signup()), other = member(signup()), r = rating(m);
     mvc.perform(
-            post("/members/{m}/ratings", m)
+            post("/ratings").header("Authorization", "Bearer " + jwt.create(m))
                 .contentType("application/json")
                 .content("{\"movieId\":550,\"score\":4}"))
         .andExpect(status().isConflict());
     for (var method :
         List.of(
-            patch("/members/{m}/ratings/{r}", other, r)
+            patch("/ratings/{r}", r).header("Authorization", "Bearer " + jwt.create(other))
                 .contentType("application/json")
                 .content("{\"score\":3}"),
-            delete("/members/{m}/ratings/{r}", other, r)))
+            delete("/ratings/{r}", r).header("Authorization", "Bearer " + jwt.create(other))))
       mvc.perform(method).andExpect(status().isForbidden());
     mvc.perform(
-            patch("/members/{m}/ratings/{r}", m, r)
+            patch("/ratings/{r}", r).header("Authorization", "Bearer " + jwt.create(m))
                 .contentType("application/json")
                 .content("{\"score\":3,\"comment\":\"updated\"}"))
         .andExpect(status().isOk());
@@ -134,9 +135,10 @@ class Week06IntegrationTest {
         .andExpect(jsonPath("$[0].comment").value("updated"));
     assertEquals(
         3, jdbc.queryForObject("select score from rating where rating_id=?", Integer.class, r));
-    mvc.perform(delete("/members/{m}/ratings/{r}", m, r))
-        .andExpect(status().isNoContent())
-        .andExpect(content().string(""));
+    mvc.perform(delete("/ratings/{r}", r).header("Authorization", "Bearer " + jwt.create(m)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.code").value("COMMON200"))
+        .andExpect(jsonPath("$.result").isEmpty());
     mvc.perform(get("/members/{m}/ratings", m)).andExpect(content().json("[]"));
     assertEquals(
         0, jdbc.queryForObject("select count(*) from rating where rating_id=?", Integer.class, r));
@@ -147,12 +149,12 @@ class Week06IntegrationTest {
   void invalidScore(String score) throws Exception {
     long m = member(signup());
     mvc.perform(
-            post("/members/{m}/ratings", m)
+            post("/ratings").header("Authorization", "Bearer " + jwt.create(m))
                 .contentType("application/json")
                 .content("{\"movieId\":550,\"score\":" + score + "}"))
         .andExpect(status().isBadRequest());
     mvc.perform(
-            patch("/members/{m}/ratings/1", m)
+            patch("/ratings/1").header("Authorization", "Bearer " + jwt.create(m))
                 .contentType("application/json")
                 .content("{\"score\":" + score + "}"))
         .andExpect(status().isBadRequest());
@@ -163,13 +165,13 @@ class Week06IntegrationTest {
     long m = member(signup());
     for (Object movie : List.of(0, -1, 1.5)) {
       mvc.perform(
-              post("/members/{m}/ratings", m)
+              post("/ratings").header("Authorization", "Bearer " + jwt.create(m))
                   .contentType("application/json")
                   .content(json.writeValueAsString(Map.of("movieId", movie, "score", 4))))
           .andExpect(status().isBadRequest());
     }
     mvc.perform(
-            post("/members/{m}/ratings", m)
+            post("/ratings").header("Authorization", "Bearer " + jwt.create(m))
                 .contentType("application/json")
                 .content(
                     json.writeValueAsString(
@@ -180,15 +182,15 @@ class Week06IntegrationTest {
   @Test
   void missingResources() throws Exception {
     mvc.perform(
-            post("/members/9223372036854775807/ratings")
+            post("/ratings").header("Authorization", "Bearer " + jwt.create(Long.MAX_VALUE))
                 .contentType("application/json")
                 .content("{\"movieId\":550,\"score\":5}"))
         .andExpect(status().isNotFound());
     mvc.perform(
-            patch("/members/1/ratings/9223372036854775807")
+            patch("/ratings/9223372036854775807").header("Authorization", "Bearer " + jwt.create(Long.MAX_VALUE))
                 .contentType("application/json")
                 .content("{\"score\":5}"))
         .andExpect(status().isNotFound());
-    mvc.perform(delete("/members/1/ratings/9223372036854775807")).andExpect(status().isNotFound());
+    mvc.perform(delete("/ratings/9223372036854775807").header("Authorization", "Bearer " + jwt.create(Long.MAX_VALUE))).andExpect(status().isNotFound());
   }
 }
