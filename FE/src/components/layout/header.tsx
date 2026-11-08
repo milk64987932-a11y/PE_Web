@@ -3,8 +3,8 @@ import { Link } from "@tanstack/react-router";
 export function Header() {
   return (
     <header className="border-b border-gray-200 bg-white">
-      <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-6">
-        <div className="flex items-center gap-8">
+      <div className="mx-auto flex min-h-16 max-w-6xl flex-wrap items-center justify-between gap-3 px-6 py-3">
+        <div className="flex items-center gap-4 sm:gap-8">
           <Link
             to="/"
             className="text-xl font-bold text-black no-underline"
@@ -12,7 +12,7 @@ export function Header() {
             UMCine
           </Link>
 
-          <nav className="flex items-center gap-6 text-sm">
+          <nav className="flex items-center gap-4 text-sm sm:gap-6">
             <Link
               to="/"
               className="text-black no-underline"
@@ -37,12 +37,13 @@ export function Header() {
             🔍
           </Link>
 
-          <button
-            type="button"
-            className="rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white"
+          <Link to="/my" className="text-sm text-gray-700 no-underline">내 정보</Link>
+          <Link
+            to="/login"
+            className="rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white no-underline"
           >
             로그인
-          </button>
+          </Link>
         </div>
       </div>
     </header>
